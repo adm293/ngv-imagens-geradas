@@ -1,1 +1,27 @@
-
+name: fetch-imagens
+on:
+  push:
+    paths: ["fila/**"]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: baixar da fila
+        run: |
+          mkdir -p imagens
+          shopt -s nullglob
+          for f in fila/*.url; do
+            nome="imagens/$(basename "${f%.url}")"
+            url="$(tr -d '\r\n' < "$f")"
+            echo "baixando $nome"
+            curl -sL --fail -o "$nome" "$url" && rm "$f" || echo "falhou: $nome"
+          done
+      - name: commit
+        run: |
+          git config user.name "ngv-bot"
+          git config user.email "bot@ngveducacao.com"
+          git add -A
+          git diff --cached --quiet || (git commit -m "imagens: fetch automatico da fila" && git push)
